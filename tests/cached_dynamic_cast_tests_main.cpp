@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <iostream>
+#include <chrono>
 
 namespace
 {
@@ -124,6 +125,47 @@ static void reset_global_cache()
 {
   std::unique_lock writer_lock{ detail::cached_dynamic_cast_detail::global_cache_mutex };
   detail::cached_dynamic_cast_detail::global_cache.clear();
+}
+
+static void static_tests()
+{
+  reset_global_cache();
+
+  B object;
+
+  A* object_non_const_pointer = &object;
+  const A* object_const_pointer = &object;
+
+  A& object_non_const_reference = object;
+  const A& object_const_reference = object;
+
+  [[maybe_unused]] auto&& result_of_non_const_pointer_cast_to_non_const = cached_dynamic_cast<B*>(object_non_const_pointer);
+  static_assert(std::is_same_v<std::remove_reference_t<decltype(result_of_non_const_pointer_cast_to_non_const)>, B*>);
+
+  [[maybe_unused]] auto&& result_of_non_const_pointer_cast_to_const = cached_dynamic_cast<const B*>(object_non_const_pointer);
+  static_assert(std::is_same_v<std::remove_reference_t<decltype(result_of_non_const_pointer_cast_to_const)>, const B*>);
+
+  // should not compile
+  //[[maybe_unused]] auto&& result_of_const_pointer_cast_to_non_const = cached_dynamic_cast<B*>(object_const_pointer);
+  //static_assert(std::is_same_v<std::remove_reference_t<decltype(result_of_const_pointer_cast_to_non_const)>, B*>);
+
+  [[maybe_unused]] auto&& result_of_const_pointer_cast_to_const = cached_dynamic_cast<const B*>(object_const_pointer);
+  static_assert(std::is_same_v<std::remove_reference_t<decltype(result_of_const_pointer_cast_to_const)>, const B*>);
+
+  [[maybe_unused]] auto&& result_of_non_const_reference_cast_to_non_const = cached_dynamic_cast<B&>(object_non_const_reference);
+  static_assert(std::is_same_v<std::remove_reference_t<decltype(result_of_non_const_reference_cast_to_non_const)>, B>);
+
+  [[maybe_unused]] auto&& result_of_non_const_reference_cast_to_const = cached_dynamic_cast<const B&>(object_non_const_reference);
+  static_assert(std::is_same_v<std::remove_reference_t<decltype(result_of_non_const_reference_cast_to_const)>, const B>);
+
+  // should not compile
+  //[[maybe_unused]] auto&& result_of_const_reference_cast_to_non_const = cached_dynamic_cast<B&>(object_const_reference);
+  //static_assert(std::is_same_v<std::remove_reference_t<decltype(result_of_const_reference_cast_to_non_const)>, B>);
+
+  [[maybe_unused]] auto&& result_of_const_reference_cast_to_const = cached_dynamic_cast<const B&>(object_const_reference);
+  static_assert(std::is_same_v<std::remove_reference_t<decltype(result_of_const_reference_cast_to_const)>, const B>);
+
+  reset_global_cache();
 }
 
 static void test_01() // cast from a base type to a derived type, a valid cast, different dynamic `typeid`s
@@ -506,6 +548,32 @@ static void test_11() // special case: cast to a `final` class
   }
 }
 
+static void test_12() // sequentially try casting from different "static" types that have the same "dynamic" type
+{
+  reset_global_cache();
+
+  SimpleDerivedFromDerived object;
+
+  SimpleDerivedFromDerived* most_derived_pointer = &object;
+  SimpleDerived* middle_pointer = &object;
+  SimpleBase* base_pointer = &object;
+
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(most_derived_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(base_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(middle_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(most_derived_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(base_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(middle_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(most_derived_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(base_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(middle_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(most_derived_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(base_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(middle_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(most_derived_pointer), SimpleDerivedFromDerived);
+  ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(base_pointer), SimpleDerivedFromDerived);
+}
+
 static int run_all_tests()
 {
   try
@@ -521,6 +589,7 @@ static int run_all_tests()
     test_09();
     test_10();
     test_11();
+    test_12();
     return 0;
   }
   catch (const test_failed_exception& ex)
@@ -529,9 +598,23 @@ static int run_all_tests()
     return 1;
   }
 }
+
+int run_all_tests_multiple_times()
+{
+  std::cout << "starting..." << '\n';
+  int result = 0;
+  const int times = 1'000'000;
+  auto t_begin = std::chrono::high_resolution_clock::now();
+  for (int i = 0; i < times; ++i)
+    result += run_all_tests();
+  auto t_end = std::chrono::high_resolution_clock::now();
+  std::cout << "all runs finished in " << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_begin).count() << " milliseconds" << '\n';
+  return result;
+}
 } // unnamed namespace
 
 int main()
 {
-  return run_all_tests();
+  static_tests();
+  return run_all_tests_multiple_times();
 }
