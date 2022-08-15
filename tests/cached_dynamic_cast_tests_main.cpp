@@ -603,7 +603,7 @@ int run_all_tests_multiple_times()
 {
   std::cout << "starting..." << '\n';
   int result = 0;
-  const int times = 1'000'000;
+  const int times = 10'000;
   auto t_begin = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < times; ++i)
     result += run_all_tests();
