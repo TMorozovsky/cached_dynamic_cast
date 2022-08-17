@@ -155,3 +155,27 @@ cached_dynamic_cast(SourceValue& source_reference)
   else
     throw std::bad_cast{};
 }
+
+// cast from an lvalue `std::shared_ptr` to a `std::shared_ptr`
+template<typename DestinationValue, typename SourceValue>
+[[nodiscard]] inline std::shared_ptr<DestinationValue>
+cached_dynamic_pointer_cast(const std::shared_ptr<SourceValue>& source_shared_pointer)
+{
+  auto* result = cached_dynamic_cast<typename std::shared_ptr<DestinationValue>::element_type*>(source_shared_pointer.get());
+  if (result)
+    return std::shared_ptr<DestinationValue>{source_shared_pointer, result};
+  else
+    return {};
+}
+
+// cast from an rvalue `std::shared_ptr` to a `std::shared_ptr`
+template<typename DestinationValue, typename SourceValue>
+[[nodiscard]] inline std::shared_ptr<DestinationValue>
+cached_dynamic_pointer_cast(std::shared_ptr<SourceValue>&& source_shared_pointer)
+{
+  auto* result = cached_dynamic_cast<typename std::shared_ptr<DestinationValue>::element_type*>(source_shared_pointer.get());
+  if (result)
+    return std::shared_ptr<DestinationValue>{std::move(source_shared_pointer), result};
+  else
+    return {};
+}

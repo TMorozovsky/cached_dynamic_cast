@@ -31,7 +31,7 @@ namespace
 
 #define ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(result_pointer_expression, expected_typeid_class) \
   { \
-    auto* result_pointer = (result_pointer_expression); \
+    auto&& result_pointer = (result_pointer_expression); \
     if (result_pointer == nullptr) \
       THROW_TEST_FAILED(); \
     if (typeid(*result_pointer) != typeid(expected_typeid_class)) \
@@ -40,7 +40,7 @@ namespace
 
 #define ASSERT_NULL(result_pointer_expression) \
   { \
-    auto* result_pointer = (result_pointer_expression); \
+    auto&& result_pointer = (result_pointer_expression); \
     if (result_pointer != nullptr) \
       THROW_TEST_FAILED(); \
   }
@@ -65,6 +65,14 @@ namespace
     } \
     if (unexpected_successful_cast) \
       THROW_TEST_FAILED(); \
+  }
+
+#define ASSERT_USE_COUNT_EQUALS(shared_pointer_expression, expected_use_count_expression) \
+  { \
+  auto&& shared_pointer = (shared_pointer_expression); \
+  auto expected_use_count = (expected_use_count_expression); \
+  if (shared_pointer.use_count() != expected_use_count) \
+    THROW_TEST_FAILED(); \
   }
 
 template<std::size_t NumberOfBytes>
@@ -574,6 +582,72 @@ static void test_12() // sequentially try casting from different "static" types 
   ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cached_dynamic_cast<SimpleDerivedFromDerived*>(base_pointer), SimpleDerivedFromDerived);
 }
 
+static void test_13() // lvalue shared pointers
+{
+  reset_global_cache();
+
+  const std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
+
+  if (true) // cast to the base type
+  {
+    auto cast_result = cached_dynamic_pointer_cast<SimpleBase>(object_ptr);
+    ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cast_result, SimpleDerived);
+    ASSERT_USE_COUNT_EQUALS(object_ptr, 2);
+    ASSERT_USE_COUNT_EQUALS(cast_result, 2);
+  }
+
+  ASSERT_USE_COUNT_EQUALS(object_ptr, 1);
+
+  if (true) // cast to the same dynamic type from the base static type
+  {
+    auto cast_result = cached_dynamic_pointer_cast<SimpleDerived>(object_ptr);
+    ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cast_result, SimpleDerived);
+    ASSERT_USE_COUNT_EQUALS(object_ptr, 2);
+    ASSERT_USE_COUNT_EQUALS(cast_result, 2);
+  }
+
+  ASSERT_USE_COUNT_EQUALS(object_ptr, 1);
+
+  if (true) // unsuccessful cast to a derived type
+  {
+    auto cast_result = cached_dynamic_pointer_cast<SimpleDerivedFromDerived>(object_ptr);
+    ASSERT_NULL(cast_result);
+    ASSERT_USE_COUNT_EQUALS(object_ptr, 1);
+  }
+}
+
+static void test_14() // rvalue shared pointers
+{
+  reset_global_cache();
+
+  if (true) // cast to the base type
+  {
+    std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
+    auto cast_result = cached_dynamic_pointer_cast<SimpleBase>(std::move(object_ptr));
+    ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cast_result, SimpleDerived);
+    ASSERT_USE_COUNT_EQUALS(cast_result, 1);
+    ASSERT_NULL(object_ptr); // moved-from
+  }
+
+  if (true) // cast to the same dynamic type from the base static type
+  {
+    std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
+    auto cast_result = cached_dynamic_pointer_cast<SimpleDerived>(std::move(object_ptr));
+    ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cast_result, SimpleDerived);
+    ASSERT_USE_COUNT_EQUALS(cast_result, 1);
+    ASSERT_NULL(object_ptr); // moved-from
+  }
+
+  if (true) // unsuccessful cast to a derived type
+  {
+    std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
+    auto cast_result = cached_dynamic_pointer_cast<SimpleDerivedFromDerived>(std::move(object_ptr));
+    ASSERT_NULL(cast_result);
+    ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(object_ptr, SimpleDerived); // not moved-from because the cast has failed
+    ASSERT_USE_COUNT_EQUALS(object_ptr, 1);
+  }
+}
+
 static int run_all_tests()
 {
   try
@@ -590,6 +664,8 @@ static int run_all_tests()
     test_10();
     test_11();
     test_12();
+    test_13();
+    test_14();
     return 0;
   }
   catch (const test_failed_exception& ex)
