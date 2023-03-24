@@ -87,6 +87,8 @@ private:
   std::array<unsigned char, NumberOfBytes - sizeof(void*)> dummy_offset_modifying_data{};
 };
 
+static_assert(sizeof(DummyOffsetModifyingStruct<24>) == 24);
+
 // simple base and derived classes
 class SimpleBase : public DummyOffsetModifyingStruct<24>
 {
@@ -129,15 +131,9 @@ class D : public DummyOffsetModifyingStruct<80>, public B, public DummyOffsetMod
 {
 };
 
-static void reset_global_cache()
-{
-  std::unique_lock writer_lock{ detail::cached_dynamic_cast_detail::global_cache_mutex };
-  detail::cached_dynamic_cast_detail::global_cache.clear();
-}
-
 static void static_tests()
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   B object;
 
@@ -173,12 +169,12 @@ static void static_tests()
   [[maybe_unused]] auto&& result_of_const_reference_cast_to_const = cached_dynamic_cast<const B&>(object_const_reference);
   static_assert(std::is_same_v<std::remove_reference_t<decltype(result_of_const_reference_cast_to_const)>, const B>);
 
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 }
 
 static void test_01() // cast from a base type to a derived type, a valid cast, different dynamic `typeid`s
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   SimpleDerivedFromDerived derived;
   SimpleBase* base_pointer = &derived;
@@ -193,7 +189,7 @@ static void test_01() // cast from a base type to a derived type, a valid cast, 
 
 static void test_02() // cast from a base type to a derived type, a valid cast, same dynamic `typeid`
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   SimpleDerived derived;
   SimpleBase* base_pointer = &derived;
@@ -206,7 +202,7 @@ static void test_02() // cast from a base type to a derived type, a valid cast, 
 
 static void test_03() // cast from a base type to a derived type, an invalid cast
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   SimpleDerived other_derived;
   SimpleBase* base_pointer = &other_derived;
@@ -219,7 +215,7 @@ static void test_03() // cast from a base type to a derived type, an invalid cas
 
 static void test_04() // cast between the same static types, different dynamic `typeid`s
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   SimpleDerivedFromDerived object;
   SimpleDerived* object_pointer = &object;
@@ -232,7 +228,7 @@ static void test_04() // cast between the same static types, different dynamic `
 
 static void test_05() // cast between the same static types, same dynamic `typeid`
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   SimpleDerived object;
   SimpleDerived* object_pointer = &object;
@@ -245,7 +241,7 @@ static void test_05() // cast between the same static types, same dynamic `typei
 
 static void test_06() // cast from a derived type to a base type, different dynamic `typeid`s
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   SimpleDerivedFromDerived derived;
   SimpleDerived* derived_pointer = &derived;
@@ -258,7 +254,7 @@ static void test_06() // cast from a derived type to a base type, different dyna
 
 static void test_07() // cast from a derived type to a base type, same dynamic `typeid`
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   SimpleDerived derived;
   SimpleDerived* derived_pointer = &derived;
@@ -271,7 +267,7 @@ static void test_07() // cast from a derived type to a base type, same dynamic `
 
 static void test_08() // cast between completely unrelated types
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   SimpleDerived object;
   SimpleDerived* object_pointer = &object;
@@ -284,7 +280,7 @@ static void test_08() // cast between completely unrelated types
 
 static void test_09() // "diamond" hierarchy with virtual inheritance, various casts
 {
-  if (reset_global_cache(); true) // destination type = A, source STATIC type = A, source DYNAMIC type = A
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = A, source STATIC type = A, source DYNAMIC type = A
   {
     A object;
     A* object_pointer = &object;
@@ -293,7 +289,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<A&>(*object_pointer), A);
   }
 
-  if (reset_global_cache(); true) // destination type = A, source STATIC type = A, source DYNAMIC type = B
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = A, source STATIC type = A, source DYNAMIC type = B
   {
     B object;
     A* object_pointer = &object;
@@ -302,7 +298,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<A&>(*object_pointer), B);
   }
 
-  if (reset_global_cache(); true) // destination type = A, source STATIC type = A, source DYNAMIC type = C
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = A, source STATIC type = A, source DYNAMIC type = C
   {
     C object;
     A* object_pointer = &object;
@@ -311,7 +307,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<A&>(*object_pointer), C);
   }
 
-  if (reset_global_cache(); true) // destination type = A, source STATIC type = A, source DYNAMIC type = D
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = A, source STATIC type = A, source DYNAMIC type = D
   {
     D object;
     A* object_pointer = &object;
@@ -320,7 +316,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<A&>(*object_pointer), D);
   }
 
-  if (reset_global_cache(); true) // destination type = A, source STATIC type = B, source DYNAMIC type = B
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = A, source STATIC type = B, source DYNAMIC type = B
   {
     B object;
     B* object_pointer = &object;
@@ -329,7 +325,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<A&>(*object_pointer), B);
   }
 
-  if (reset_global_cache(); true) // destination type = A, source STATIC type = B, source DYNAMIC type = D
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = A, source STATIC type = B, source DYNAMIC type = D
   {
     D object;
     B* object_pointer = &object;
@@ -338,7 +334,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<A&>(*object_pointer), D);
   }
 
-  if (reset_global_cache(); true) // destination type = A, source STATIC type = C, source DYNAMIC type = C
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = A, source STATIC type = C, source DYNAMIC type = C
   {
     C object;
     C* object_pointer = &object;
@@ -347,7 +343,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<A&>(*object_pointer), C);
   }
 
-  if (reset_global_cache(); true) // destination type = A, source STATIC type = C, source DYNAMIC type = D
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = A, source STATIC type = C, source DYNAMIC type = D
   {
     D object;
     C* object_pointer = &object;
@@ -356,7 +352,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<A&>(*object_pointer), D);
   }
 
-  if (reset_global_cache(); true) // destination type = B, source STATIC type = A, source DYNAMIC type = A
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = B, source STATIC type = A, source DYNAMIC type = A
   {
     A object;
     A* object_pointer = &object;
@@ -365,7 +361,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_THROWS_BAD_CAST(cached_dynamic_cast<B&>(*object_pointer));
   }
 
-  if (reset_global_cache(); true) // destination type = B, source STATIC type = A, source DYNAMIC type = B
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = B, source STATIC type = A, source DYNAMIC type = B
   {
     B object;
     A* object_pointer = &object;
@@ -374,7 +370,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<B&>(*object_pointer), B);
   }
 
-  if (reset_global_cache(); true) // destination type = B, source STATIC type = A, source DYNAMIC type = C
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = B, source STATIC type = A, source DYNAMIC type = C
   {
     C object;
     A* object_pointer = &object;
@@ -383,7 +379,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_THROWS_BAD_CAST(cached_dynamic_cast<B&>(*object_pointer));
   }
 
-  if (reset_global_cache(); true) // destination type = B, source STATIC type = A, source DYNAMIC type = D
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = B, source STATIC type = A, source DYNAMIC type = D
   {
     D object;
     A* object_pointer = &object;
@@ -392,7 +388,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<B&>(*object_pointer), D);
   }
 
-  if (reset_global_cache(); true) // destination type = C, source STATIC type = A, source DYNAMIC type = A
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = C, source STATIC type = A, source DYNAMIC type = A
   {
     A object;
     A* object_pointer = &object;
@@ -401,7 +397,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_THROWS_BAD_CAST(cached_dynamic_cast<C&>(*object_pointer));
   }
 
-  if (reset_global_cache(); true) // destination type = C, source STATIC type = A, source DYNAMIC type = B
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = C, source STATIC type = A, source DYNAMIC type = B
   {
     B object;
     A* object_pointer = &object;
@@ -410,7 +406,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_THROWS_BAD_CAST(cached_dynamic_cast<C&>(*object_pointer));
   }
 
-  if (reset_global_cache(); true) // destination type = C, source STATIC type = A, source DYNAMIC type = C
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = C, source STATIC type = A, source DYNAMIC type = C
   {
     C object;
     A* object_pointer = &object;
@@ -419,7 +415,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<C&>(*object_pointer), C);
   }
 
-  if (reset_global_cache(); true) // destination type = C, source STATIC type = A, source DYNAMIC type = D
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = C, source STATIC type = A, source DYNAMIC type = D
   {
     D object;
     A* object_pointer = &object;
@@ -428,7 +424,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<C&>(*object_pointer), D);
   }
 
-  if (reset_global_cache(); true) // destination type = D, source STATIC type = A, source DYNAMIC type = A
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = D, source STATIC type = A, source DYNAMIC type = A
   {
     A object;
     A* object_pointer = &object;
@@ -437,7 +433,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_THROWS_BAD_CAST(cached_dynamic_cast<D&>(*object_pointer));
   }
 
-  if (reset_global_cache(); true) // destination type = D, source STATIC type = A, source DYNAMIC type = B
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = D, source STATIC type = A, source DYNAMIC type = B
   {
     B object;
     A* object_pointer = &object;
@@ -446,7 +442,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_THROWS_BAD_CAST(cached_dynamic_cast<D&>(*object_pointer));
   }
 
-  if (reset_global_cache(); true) // destination type = D, source STATIC type = A, source DYNAMIC type = C
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = D, source STATIC type = A, source DYNAMIC type = C
   {
     C object;
     A* object_pointer = &object;
@@ -455,7 +451,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_THROWS_BAD_CAST(cached_dynamic_cast<D&>(*object_pointer));
   }
 
-  if (reset_global_cache(); true) // destination type = D, source STATIC type = A, source DYNAMIC type = D
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = D, source STATIC type = A, source DYNAMIC type = D
   {
     D object;
     A* object_pointer = &object;
@@ -464,7 +460,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<D&>(*object_pointer), D);
   }
 
-  if (reset_global_cache(); true) // destination type = D, source STATIC type = B, source DYNAMIC type = B
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = D, source STATIC type = B, source DYNAMIC type = B
   {
     B object;
     B* object_pointer = &object;
@@ -473,7 +469,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_THROWS_BAD_CAST(cached_dynamic_cast<D&>(*object_pointer));
   }
 
-  if (reset_global_cache(); true) // destination type = D, source STATIC type = B, source DYNAMIC type = D
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = D, source STATIC type = B, source DYNAMIC type = D
   {
     D object;
     B* object_pointer = &object;
@@ -482,7 +478,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<D&>(*object_pointer), D);
   }
 
-  if (reset_global_cache(); true) // destination type = D, source STATIC type = C, source DYNAMIC type = C
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = D, source STATIC type = C, source DYNAMIC type = C
   {
     C object;
     C* object_pointer = &object;
@@ -491,7 +487,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_THROWS_BAD_CAST(cached_dynamic_cast<D&>(*object_pointer));
   }
 
-  if (reset_global_cache(); true) // destination type = D, source STATIC type = C, source DYNAMIC type = D
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = D, source STATIC type = C, source DYNAMIC type = D
   {
     D object;
     C* object_pointer = &object;
@@ -500,7 +496,7 @@ static void test_09() // "diamond" hierarchy with virtual inheritance, various c
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<D&>(*object_pointer), D);
   }
 
-  if (reset_global_cache(); true) // destination type = D, source STATIC type = D, source DYNAMIC type = D
+  if (reset_cached_dynamic_cast_global_cache(); true) // destination type = D, source STATIC type = D, source DYNAMIC type = D
   {
     D object;
     D* object_pointer = &object;
@@ -514,19 +510,19 @@ static void test_10() // special case: cast from `nullptr`
 {
   SimpleDerived* const object_pointer = nullptr;
 
-  if (reset_global_cache(); true) // cast to a base class
+  if (reset_cached_dynamic_cast_global_cache(); true) // cast to a base class
   {
     ASSERT_NULL(cached_dynamic_cast<SimpleBase*>(object_pointer));
     ASSERT_NULL(cached_dynamic_cast<SimpleBase*>(object_pointer));
   }
 
-  if (reset_global_cache(); true) // cast to the same class
+  if (reset_cached_dynamic_cast_global_cache(); true) // cast to the same class
   {
     ASSERT_NULL(cached_dynamic_cast<SimpleDerived*>(object_pointer));
     ASSERT_NULL(cached_dynamic_cast<SimpleDerived*>(object_pointer));
   }
 
-  if (reset_global_cache(); true) // cast to a derived class
+  if (reset_cached_dynamic_cast_global_cache(); true) // cast to a derived class
   {
     ASSERT_NULL(cached_dynamic_cast<SimpleDerivedFromDerived*>(object_pointer));
     ASSERT_NULL(cached_dynamic_cast<SimpleDerivedFromDerived*>(object_pointer));
@@ -535,7 +531,7 @@ static void test_10() // special case: cast from `nullptr`
 
 static void test_11() // special case: cast to a `final` class
 {
-  if (reset_global_cache(); true) // successful scenario
+  if (reset_cached_dynamic_cast_global_cache(); true) // successful scenario
   {
     OtherSimpleDerivedFinal object;
     SimpleBase* object_pointer = &object;
@@ -545,7 +541,7 @@ static void test_11() // special case: cast to a `final` class
     ASSERT_HAS_TYPEID_OF(cached_dynamic_cast<OtherSimpleDerivedFinal&>(*object_pointer), OtherSimpleDerivedFinal);
   }
 
-  if (reset_global_cache(); true) // unsuccessful scenario
+  if (reset_cached_dynamic_cast_global_cache(); true) // unsuccessful scenario
   {
     SimpleDerived object;
     SimpleBase* object_pointer = &object;
@@ -558,7 +554,7 @@ static void test_11() // special case: cast to a `final` class
 
 static void test_12() // sequentially try casting from different "static" types that have the same "dynamic" type
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   SimpleDerivedFromDerived object;
 
@@ -584,7 +580,7 @@ static void test_12() // sequentially try casting from different "static" types 
 
 static void test_13() // lvalue shared pointers
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   const std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
 
@@ -618,7 +614,7 @@ static void test_13() // lvalue shared pointers
 
 static void test_14() // rvalue shared pointers
 {
-  reset_global_cache();
+  reset_cached_dynamic_cast_global_cache();
 
   if (true) // cast to the base type
   {

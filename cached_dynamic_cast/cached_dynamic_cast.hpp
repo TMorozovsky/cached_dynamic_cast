@@ -35,6 +35,12 @@ namespace detail::cached_dynamic_cast_detail
   }
 } // namespace detail::cached_dynamic_cast_detail
 
+inline void reset_cached_dynamic_cast_global_cache()
+{
+  std::unique_lock writer_lock{ detail::cached_dynamic_cast_detail::global_cache_mutex };
+  detail::cached_dynamic_cast_detail::global_cache.clear();
+}
+
 // primary template: cast from a pointer type to a pointer type
 template<typename DestinationPointer, typename SourcePointer>
 [[nodiscard]] inline std::enable_if_t<std::is_pointer_v<DestinationPointer>, DestinationPointer>
