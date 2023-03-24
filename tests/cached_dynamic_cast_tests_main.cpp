@@ -627,7 +627,7 @@ static void test_14() // rvalue shared pointers
     std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
     auto cast_result = cached_dynamic_pointer_cast<SimpleBase>(std::move(object_ptr));
     ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cast_result, SimpleDerived);
-    if (check_moved_from_shared_ptr)
+    if constexpr (check_moved_from_shared_ptr)
     {
       ASSERT_USE_COUNT_EQUALS(cast_result, 1);
       ASSERT_NULL(object_ptr); // moved-from
@@ -639,7 +639,7 @@ static void test_14() // rvalue shared pointers
     std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
     auto cast_result = cached_dynamic_pointer_cast<SimpleDerived>(std::move(object_ptr));
     ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cast_result, SimpleDerived);
-    if (check_moved_from_shared_ptr)
+    if constexpr (check_moved_from_shared_ptr)
     {
       ASSERT_USE_COUNT_EQUALS(cast_result, 1);
       ASSERT_NULL(object_ptr); // moved-from
@@ -651,7 +651,7 @@ static void test_14() // rvalue shared pointers
     std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
     auto cast_result = cached_dynamic_pointer_cast<SimpleDerivedFromDerived>(std::move(object_ptr));
     ASSERT_NULL(cast_result);
-    if (check_moved_from_shared_ptr)
+    if constexpr (check_moved_from_shared_ptr)
     {
       ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(object_ptr, SimpleDerived); // not moved-from because the cast has failed
       ASSERT_USE_COUNT_EQUALS(object_ptr, 1);
