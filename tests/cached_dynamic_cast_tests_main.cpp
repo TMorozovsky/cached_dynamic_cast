@@ -616,13 +616,22 @@ static void test_14() // rvalue shared pointers
 {
   reset_cached_dynamic_cast_global_cache();
 
+#if defined(__GNUC__)
+  static constexpr bool check_moved_from_shared_ptr = (__cplusplus > 201703L);
+#else
+  static constexpr bool check_moved_from_shared_ptr = true;
+#endif
+
   if (true) // cast to the base type
   {
     std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
     auto cast_result = cached_dynamic_pointer_cast<SimpleBase>(std::move(object_ptr));
     ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cast_result, SimpleDerived);
-    ASSERT_USE_COUNT_EQUALS(cast_result, 1);
-    ASSERT_NULL(object_ptr); // moved-from
+    if (check_moved_from_shared_ptr)
+    {
+      ASSERT_USE_COUNT_EQUALS(cast_result, 1);
+      ASSERT_NULL(object_ptr); // moved-from
+    }
   }
 
   if (true) // cast to the same dynamic type from the base static type
@@ -630,8 +639,11 @@ static void test_14() // rvalue shared pointers
     std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
     auto cast_result = cached_dynamic_pointer_cast<SimpleDerived>(std::move(object_ptr));
     ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(cast_result, SimpleDerived);
-    ASSERT_USE_COUNT_EQUALS(cast_result, 1);
-    ASSERT_NULL(object_ptr); // moved-from
+    if (check_moved_from_shared_ptr)
+    {
+      ASSERT_USE_COUNT_EQUALS(cast_result, 1);
+      ASSERT_NULL(object_ptr); // moved-from
+    }
   }
 
   if (true) // unsuccessful cast to a derived type
@@ -639,8 +651,11 @@ static void test_14() // rvalue shared pointers
     std::shared_ptr<SimpleBase> object_ptr = std::make_shared<SimpleDerived>();
     auto cast_result = cached_dynamic_pointer_cast<SimpleDerivedFromDerived>(std::move(object_ptr));
     ASSERT_NULL(cast_result);
-    ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(object_ptr, SimpleDerived); // not moved-from because the cast has failed
-    ASSERT_USE_COUNT_EQUALS(object_ptr, 1);
+    if (check_moved_from_shared_ptr)
+    {
+      ASSERT_NOT_NULL_AND_HAS_TYPEID_OF(object_ptr, SimpleDerived); // not moved-from because the cast has failed
+      ASSERT_USE_COUNT_EQUALS(object_ptr, 1);
+    }
   }
 }
 
